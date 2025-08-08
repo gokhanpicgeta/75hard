@@ -35,18 +35,26 @@ const Day = ({ day, isCurrentDay = false, isCompleted = false, onPress }) => {
   );
 };
 
-const Calendar = ({ attempt }) => {
+const Calendar = ({ setIndex }) => {
   const [currentAttempt, setCurrentAttempt] = useState({});
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
+      console.log("loading calendar screen");
       const loadData = async () => {
-        const savedCurrentAttempt = await AsyncStorage.getItem(
-          "currentAttempt"
-        );
-        console.log(JSON.parse(savedCurrentAttempt).currentDay);
-        setCurrentAttempt(JSON.parse(savedCurrentAttempt));
+        try {
+          const savedCurrentAttempt = await AsyncStorage.getItem(
+            "currentAttempt"
+          );
+          console.log(
+            "current day",
+            JSON.parse(savedCurrentAttempt).currentDay
+          );
+          setCurrentAttempt(JSON.parse(savedCurrentAttempt));
+        } catch (error) {
+          console.error("Error loading calendar data: ", error);
+        }
       };
       loadData();
     }, [])
@@ -86,7 +94,11 @@ const Calendar = ({ attempt }) => {
         JSON.stringify(updatedAttempt)
       );
 
-      router.replace("daily-progress");
+      // router.replace({
+      //   pathname: "/tracker/daily-progress",
+      //   params: { tab: "progress" },
+      // });
+      setIndex(0);
     } catch (error) {
       console.error("Error in handleDayClick:", error);
     }
@@ -94,7 +106,9 @@ const Calendar = ({ attempt }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Day {currentAttempt.currentDay + 1} </Text>
+      <Text style={styles.header}>
+        Calendar Day {/*{currentAttempt?.currentDay + 1}{" "} */}
+      </Text>
       <FlatList
         data={currentAttempt.isDaysComplete}
         numColumns={7}

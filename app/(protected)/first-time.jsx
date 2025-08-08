@@ -14,10 +14,10 @@ import { LinearGradient } from "expo-linear-gradient";
 export default function HomeScreen() {
   const [isFirstLaunch, setIsFirstLaunch] = useState(null);
   const [selectedChallenge, setSelectedChallenge] = useState(null);
-  const [challenges, setChallenges] = useState([])
-  const [attempts,  setAttempts] = useState([])
+  const [challenges, setChallenges] = useState([]);
+  const [attempts, setAttempts] = useState([]);
 
-  const router  = useRouter();
+  const router = useRouter();
 
   useEffect(() => {
     const checkFirstLaunch = async () => {
@@ -45,31 +45,37 @@ export default function HomeScreen() {
       setSelectedChallenge(challenge);
       setIsFirstLaunch(false);
 
-      if(challenge === "75 Hard"){
+      if (challenge === "75 Hard") {
+        console.log(
+          "75 hard is chosen, now store list of challenges in async storage"
+        );
 
-        console.log("75 hard is chosen, now store list of challenges in async storage")
-        
-        await AsyncStorage.setItem("challenges", JSON.stringify([
-          "45 minute Outdoor workout",
-          "Additional 45 minute Outdoor/Indoor workout",
-          "1 gallon of water",
-          "Reading 10 pages of a non fiction book",
-          "Take a progress picture",
-        ]))
-
-      }
-      else if(challenge === "75 Soft"){
-        console.log("75 soft is chosen, now store list of challenges in async storage")
-        await AsyncStorage.setItem("challenges", JSON.stringify([
-          "45 minute workout",
-          "3 Liters of water",
-          "Reading 10 pages of any book",
-          "Take a progress picture",
-        ]))
+        await AsyncStorage.setItem(
+          "challenges",
+          JSON.stringify([
+            "45 minute Outdoor workout",
+            "Additional 45 minute Outdoor/Indoor workout",
+            "1 gallon of water",
+            "Reading 10 pages of a non fiction book",
+            "Take a progress picture",
+          ])
+        );
+      } else if (challenge === "75 Soft") {
+        console.log(
+          "75 soft is chosen, now store list of challenges in async storage"
+        );
+        await AsyncStorage.setItem(
+          "challenges",
+          JSON.stringify([
+            "45 minute workout",
+            "3 Liters of water",
+            "Reading 10 pages of any book",
+            "Take a progress picture",
+          ])
+        );
       }
 
       router.push("/task-list");
-
     } catch (e) {
       console.error("Failed to save challenge:", e);
     }
@@ -95,54 +101,49 @@ export default function HomeScreen() {
 
   if (isFirstLaunch) {
     return (
-      
-      
       <ScrollView style={styles.container}>
-
         <Text style={styles.title}>Welcome to 75 Challenge</Text>
         <Text style={styles.subtitle}>Pick your challenge to begin:</Text>
 
         {/* 75 Hard Card */}
-          <TouchableOpacity
-            style={styles.challengeCard}
-            onPress={() => selectChallenge("75 Hard")}
+        <TouchableOpacity
+          style={styles.challengeCard}
+          onPress={() => selectChallenge("75 Hard")}
+        >
+          <LinearGradient
+            colors={["#007AFF", "#00C4FF"]}
+            style={styles.gradient}
           >
-            
-            <LinearGradient
-              colors={["#007AFF", "#00C4FF"]}
-              style={styles.gradient}
-            >
-              <Text style={styles.cardTitle}>75 Hard</Text>
-              <Text style={styles.cardDetails}>
-                💪 2 Workouts (45 min each, 1 outdoor){"\n"}
-                💧 1 Gallon of Water{"\n"}
-                🍽️ Follow a Diet (No Cheat Meals){"\n"}
-                📖 Read 10 Pages (Non-Fiction){"\n"}
-                📸 Take a Progress Picture
-              </Text>
-            </LinearGradient>
-            
-          </TouchableOpacity>
+            <Text style={styles.cardTitle}>75 Hard</Text>
+            <Text style={styles.cardDetails}>
+              💪 2 Workouts (45 min each, 1 outdoor){"\n"}
+              💧 1 Gallon of Water{"\n"}
+              🍽️ Follow a Diet (No Cheat Meals){"\n"}
+              📖 Read 10 Pages (Non-Fiction){"\n"}
+              📸 Take a Progress Picture
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* 75 Soft Card */}
-          <TouchableOpacity
-            style={styles.challengeCard}
-            onPress={() => selectChallenge("75 Soft")}
+        <TouchableOpacity
+          style={styles.challengeCard}
+          onPress={() => selectChallenge("75 Soft")}
+        >
+          <LinearGradient
+            colors={["#34C759", "#7ED957"]}
+            style={styles.gradient}
           >
-            <LinearGradient
-              colors={["#34C759", "#7ED957"]}
-              style={styles.gradient}
-            >
-              <Text style={styles.cardTitle}>75 Soft</Text>
-              <Text style={styles.cardDetails}>
-                🏋️ 1 Workout (45 min){"\n"}
-                🥗 Eat Well (1 Cheat Meal Allowed){"\n"}
-                💦 Drink 3L of Water{"\n"}
-                📚 Read 10 Pages (Any Book){"\n"}
-                📷 Take a Progress Picture
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <Text style={styles.cardTitle}>75 Soft</Text>
+            <Text style={styles.cardDetails}>
+              🏋️ 1 Workout (45 min){"\n"}
+              🥗 Eat Well (1 Cheat Meal Allowed){"\n"}
+              💦 Drink 3L of Water{"\n"}
+              📚 Read 10 Pages (Any Book){"\n"}
+              📷 Take a Progress Picture
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Custom Challenge Option */}
         <TouchableOpacity
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   cardLink: {
-    marginHorizontal:20,
+    marginHorizontal: 20,
     marginBottom: 20,
   },
   challengeCard: {

@@ -3,6 +3,8 @@ import {
   View,
   StyleSheet,
   Text,
+  Pressable,
+  Platform,
   TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -12,6 +14,8 @@ import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import AttemptsCarousel from "../components/AttemptCarousel";
 import CurrentAttemptCard from "../components/CurrentAttempt";
+import { db } from "../../../firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 //TODO: Create a failed challenge button, create a dictionary of challenges that store the progress for each so they can be viewed later?
 // I need a way to store which challenge is 75 hard, soft, or a custom challenge, so current attempt prolly needs more things than just days,
@@ -20,26 +24,69 @@ import CurrentAttemptCard from "../components/CurrentAttempt";
 export default function HomeScreen() {
   const [currentAttempt, setCurrentAttempt] = useState([]);
   const [prevAttempts, setPrevAttempts] = useState([]);
+  const [user, setUser] = useState({});
 
   const router = useRouter();
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const savedUser = await AsyncStorage.getItem("user");
+        //console.log("saved user is", JSON.parse(savedUser));
+        if (savedUser != null) {
+          setUser(JSON.parse(savedUser));
+        }
+      } catch (error) {
+        console.error("Failed to load user from storage:", error);
+      }
+    };
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    const saveData = async () => {
+      try {
+        await AsyncStorage.setItem(
+          "currentAttempt",
+          JSON.stringify(currentAttempt)
+        );
+      } catch (error) {
+        console.error("Error saving current data in local storage:", error);
+      }
+    };
+    saveData();
+  }, [currentAttempt]);
 
   useFocusEffect(
     useCallback(() => {
       const loadData = async () => {
         console.log("loading data home screen");
-        const savedCurrentAttempt = await AsyncStorage.getItem(
-          "currentAttempt"
-        );
-        const savedPrevAttempts = await AsyncStorage.getItem("prevAttempts");
-        setPrevAttempts(JSON.parse(savedPrevAttempts));
-        console.log("current Attempt", JSON.parse(savedCurrentAttempt));
+        console.log("Current user is: ", user);
 
-        setCurrentAttempt(JSON.parse(savedCurrentAttempt));
+        const docRef = doc(db, "users", user.uid);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          console.log("snapshot of data is", snap.data());
+          setCurrentAttempt(snap.data().currentAttempt);
+          setPrevAttempts(snap.data().prevAttempts);
+          //setProfile(snap.data());
+        } else {
+          console.warn("User doc not found in Firestore");
+        }
+
+        // const savedCurrentAttempt = await AsyncStorage.getItem(
+        //   "currentAttempt"
+        // );
+        // const savedPrevAttempts = await AsyncStorage.getItem("prevAttempts");
+        //setPrevAttempts(JSON.parse(savedPrevAttempts));
+        //console.log("current Attempt", JSON.parse(savedCurrentAttempt));
+
+        //setCurrentAttempt(JSON.parse(savedCurrentAttempt));
         // setAttempts(JSON.parse(attemptsData))
-        console.log("home screen current attempt data", currentAttempt);
+        //console.log("home screen current attempt data", currentAttempt);
       };
       loadData();
-    }, [])
+    }, [user])
   );
 
   const startNewChallenge = async (challenge) => {
@@ -85,7 +132,6 @@ export default function HomeScreen() {
   if (currentAttempt) {
     return (
       <ScrollView>
-        <Text>Insights</Text>
         <CurrentAttemptCard attempt={currentAttempt} />
         <View style={styles.attemptsBox}>
           <AttemptsCarousel attempts={prevAttempts} />
@@ -118,7 +164,6 @@ export default function HomeScreen() {
           </Text>
         </LinearGradient>
       </TouchableOpacity>
-
       {/* 75 Soft Card */}
       <TouchableOpacity
         style={styles.challengeCard}
@@ -135,7 +180,6 @@ export default function HomeScreen() {
           </Text>
         </LinearGradient>
       </TouchableOpacity>
-
       {/* Custom Challenge Option */}
       <TouchableOpacity
         style={styles.customButton}

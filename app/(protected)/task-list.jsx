@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+import { AuthContext } from "../utils/authContext";
 
 export default function TaskList() {
   const [selectedChallenge, setSelectedChallenge] = useState("");
@@ -21,6 +24,8 @@ export default function TaskList() {
   const [prevAttempts, setPrevAttempts] = useState([]);
   const [currentAttempt, setCurrentAttempt] = useState([]);
   const [attemptNumber, setAttemptNumber] = useState(0);
+
+  const authState = useContext(AuthContext);
 
   const router = useRouter();
 
@@ -37,6 +42,7 @@ export default function TaskList() {
         setCurrentAttempt(JSON.parse(currentAttemptData) || []);
         setAttemptNumber(JSON.parse(attemptNumberData) || 0);
         setSelectedChallenge(challenge || "75 Hard");
+
         setTasks(
           storedTasks
             ? JSON.parse(storedTasks).map((task, index) => ({
@@ -89,13 +95,14 @@ export default function TaskList() {
 
   const startChallenge = async () => {
     try {
+      //TODO: Fix attempt number when switching accounts
       const newAttemptNumber = attemptNumber + 1;
       setAttemptNumber(newAttemptNumber);
 
-      const tempProgress = [];
+      const tempProgress = {};
 
       for (let i = 0; i < 75; i++) {
-        tempProgress.push([]);
+        tempProgress[i] = [];
         for (let j = 0; j < tasks.length; j++) {
           tempProgress[i].push(false);
         }
@@ -108,39 +115,44 @@ export default function TaskList() {
         tempProgress[0].length
       );
 
-      await AsyncStorage.setItem(
-        "currentAttempt",
-        JSON.stringify({
-          progress: tempProgress,
-          name: selectedChallenge,
-          startDate: Date.now().toString(),
-          id_to_task: tasks,
-          attemptNumber: newAttemptNumber,
-          isDaysComplete: Array(75).fill(false),
-          daysCompleted: 0,
-          currentDay: 0,
-        })
+      const savedUser = await AsyncStorage.getItem("user");
+      const user = JSON.parse(savedUser);
+      const userRef = doc(db, "users", user.uid);
+
+      const attempt = {
+        progress: tempProgress,
+        name: selectedChallenge,
+        startDate: Date.now().toString(),
+        id_to_task: tasks,
+        attemptNumber: newAttemptNumber,
+        isDaysComplete: Array(75).fill(false),
+        daysCompleted: 0,
+        currentDay: 0,
+      };
+
+      await setDoc(
+        userRef,
+        { attempts: attemptNumber + 1, currentAttempt: attempt },
+        { merge: true }
       );
-      const completedDays = Array(75).fill(false);
-      await AsyncStorage.setItem(
-        "completedDays",
-        JSON.stringify(completedDays)
-      );
+
+      await AsyncStorage.setItem("currentAttempt", JSON.stringify(attempt));
 
       await AsyncStorage.setItem(
         "attemptNumber",
         JSON.stringify(newAttemptNumber)
       );
 
-      setCurrentAttempt({
-        progress: [],
-        name: selectedChallenge,
-        startDate: Date.now().toString(),
-        id_to_task: tasks,
-        attemptNumber: newAttemptNumber,
-      });
+      authState.toggleActiveChallenge();
+      // setCurrentAttempt({
+      //   progress: [],
+      //   name: selectedChallenge,
+      //   startDate: Date.now().toString(),
+      //   id_to_task: tasks,
+      //   attemptNumber: newAttemptNumber,
+      // });
 
-      router.push("/daily-progress");
+      router.push("./(tabs)/tracker/daily-progress");
     } catch (e) {
       console.error("error starting challenge", e);
     }

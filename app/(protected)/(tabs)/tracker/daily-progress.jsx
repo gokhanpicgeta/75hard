@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { db } from "../../../../firebaseConfig";
+import { doc, updateDoc } from "firebase/firestore";
+import { AuthContext } from "../../../utils/authContext";
 
 const DAILY_TASKS = [
   { id: "1", name: "Workout (45 min)" },
@@ -23,12 +26,17 @@ export default function Progress() {
   const [currentDay, setCurrentDay] = useState(0);
   const [currentAttempt, setCurrentAttempt] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [user, setUser] = useState([]);
+
+  const authState = useContext(AuthContext);
 
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
+      console.log("useFocusEffect triggered for Daily Progress tab");
       const loadData = async () => {
+        console.log("loading daily progress");
         try {
           const challenge = await AsyncStorage.getItem("selectedChallenge");
           const storedTasks = await AsyncStorage.getItem("challenges");
@@ -38,6 +46,10 @@ export default function Progress() {
           const savedAttemptNumber = await AsyncStorage.getItem(
             "attemptNumber"
           );
+          const savedUser = await AsyncStorage.getItem("user");
+          setUser(JSON.parse(savedUser));
+
+          console.log("daily challengs are ", JSON.parse(storedTasks));
           //const savedCompletedDays = await AsyncStorage.getItem("completedDays");
 
           // console.log("saved current attempt", savedCurrentAttempt);
@@ -68,6 +80,10 @@ export default function Progress() {
   );
 
   useEffect(() => {
+    console.log("currentDay updated to:", currentDay);
+  }, [currentDay]);
+
+  useEffect(() => {
     const saveProgress = async () => {
       try {
         if (currentAttempt) {
@@ -76,6 +92,10 @@ export default function Progress() {
             "currentAttempt",
             JSON.stringify(currentAttempt)
           );
+
+          await updateDoc(doc(db, "users", user.uid), {
+            currentAttempt: currentAttempt,
+          });
         }
       } catch (e) {
         console.error("Failed to save progress:", e);
@@ -86,15 +106,16 @@ export default function Progress() {
 
   const toggleTask = (taskId) => {
     setCurrentAttempt((prevCurrentAttempt) => {
-      //console.log("prev current attempt", prevCurrentAttempt);
-      const updatedProgress = [...prevCurrentAttempt.progress];
+      //console.log("prev current attempt", prevCurrentAttempt.progress[0]);
+      const updatedProgress = prevCurrentAttempt.progress;
+      console.log("Updated progress", updatedProgress[0]);
 
       const currentDayTasks = updatedProgress[currentDay];
       //? { ...updatedProgress[currentDay] }
       //: {};
-      console.log("taskId currdayTasks", taskId, currentDayTasks);
-      currentDayTasks[taskId] = !currentDayTasks[taskId];
 
+      currentDayTasks[taskId] = !currentDayTasks[taskId];
+      console.log("taskId currdayTasks", taskId, currentDayTasks);
       const isComplete = currentDayTasks.every((task) => task === true);
       console.log("is complete", isComplete);
 
@@ -172,8 +193,17 @@ export default function Progress() {
       "prevAttempts",
       JSON.stringify(updatedPrevAttempts)
     );
-
+    setCurrentAttempt(null);
     await AsyncStorage.setItem("currentAttempt", JSON.stringify(null));
+    await updateDoc(doc(db, "users", user.uid), {
+      prevAttempts: updatedPrevAttempts,
+    });
+    await updateDoc(doc(db, "users", user.uid), {
+      currentAttempt: null,
+    });
+
+    authState.toggleActiveChallenge();
+
     router.replace("/");
     console.log("Updated prevAttempts", updatedPrevAttempts);
     //setCurrentAttempt(null)
@@ -214,7 +244,7 @@ export default function Progress() {
           <TouchableOpacity
             style={[
               styles.taskItem,
-              currentAttempt.progress?.[currentDay]?.[item.id] &&
+              currentAttempt?.progress?.[currentDay]?.[item.id] &&
                 styles.taskCompleted,
             ]}
             onPress={() => toggleTask(item.id)}
@@ -222,7 +252,7 @@ export default function Progress() {
             <Text style={styles.taskText}>{item.name}</Text>
             <View style={styles.checkbox}>
               <Text style={styles.checkboxText}>
-                {currentAttempt.progress?.[currentDay]?.[item.id] ? "✓" : ""}
+                {currentAttempt?.progress?.[currentDay]?.[item.id] ? "✓" : ""}
               </Text>
             </View>
           </TouchableOpacity>
